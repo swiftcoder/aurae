@@ -1,0 +1,23 @@
+# Output directories
+
+out/
+
+# Python files
+
+*.py[cod]
+
+# C extensions
+
+*.so
+
+# OS generated files
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
