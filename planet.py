@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env pypy
 
 import transvoxel
 import noise
@@ -7,7 +7,7 @@ from vector import *
 
 CHUNK_SIZE=8
 
-SIZE = CHUNK_SIZE+1
+SIZE = CHUNK_SIZE+3
 SIZE_SQ = SIZE**2
 SIZE_CB = SIZE**3
 
@@ -48,6 +48,7 @@ class PlanetVolume:
 
     def get(self, chunk, pos):
         i, j, k = vdivs(vsub(pos, chunk.offset), chunk.lod)
+        i, j, k = i+1, j+1, k+1
 
         return chunk.data[i*SIZE_SQ + j*SIZE + k] - 128
 
@@ -76,7 +77,8 @@ class PlanetVolume:
         for i in range(SIZE):
             for j in range(SIZE):
                 for k in range(SIZE):
-                    chunk.data[i*SIZE_SQ + j*SIZE + k] = self._getVal(vadd(chunk.offset, vmuls((i, j, k), chunk.lod)))
+                    pos = vadd(chunk.offset, vmuls((i-1, j-1, k-1), chunk.lod))
+                    chunk.data[i*SIZE_SQ + j*SIZE + k] = self._getVal(pos)
 
     def split(self, chunk):
         if chunk.lod <= 1 or len(chunk.children) > 1:
@@ -146,8 +148,8 @@ class PlanetVolume:
     def _shouldSplit(self, chunk, viewer):
             dist = vlen(vsub(vmuls(chunk.center, self.res), viewer))
             size = chunk.lod*CHUNK_SIZE * self.res
-            
-            return dist < size*1.5
+
+            return dist < size*2.5
 
 if __name__ == "__main__":
 
@@ -160,11 +162,11 @@ if __name__ == "__main__":
     for mesh in planet.meshes():
         print 'o chunk%d' % (id(mesh))
 
-        for x, y, z in mesh.vertices:
-            print 'v %f %f %f' % (x, y, z)
+        for i in range(0, len(mesh.vertices), 3):
+            print 'v %f %f %f' % (mesh.vertices[i], mesh.vertices[i+1], mesh.vertices[i+2])
 
         for i in range(0, len(mesh.indices), 3):
             print 'f %i %i %i' % (mesh.indices[i]+k, mesh.indices[i+1]+k, mesh.indices[i+2]+k)
 
-        k += len(mesh.vertices)
+        k += len(mesh.vertices)/3
 
