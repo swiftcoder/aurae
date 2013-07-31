@@ -4,6 +4,7 @@ import transvoxel
 import noise
 
 from vector import *
+from euclid import *
 
 CHUNK_SIZE=8
 
@@ -19,12 +20,14 @@ class PlanetChunk(transvoxel.Chunk):
         self.children = []
 
         self.center = vadds(offset, CHUNK_SIZE*lod/2)
+        self.empty = False
 
 class PlanetVolume:
-    def __init__(self, radius, height, resolution):
+    def __init__(self, radius, height, resolution, delegate=None):
         self.radius = radius
         self.height = height
         self.resolution = resolution
+        self.delegate = delegate
 
         self.res = float(radius + height) * 2.0 / resolution
 
@@ -46,6 +49,8 @@ class PlanetVolume:
 
         self.build(self.chunks[0])
 
+        self.modelmatrix = Matrix4.new_scale(self.res, self.res, self.res)
+
     def get(self, chunk, pos):
         i, j, k = vdivs(vsub(pos, chunk.offset), chunk.lod)
         i, j, k = i+1, j+1, k+1
@@ -61,13 +66,30 @@ class PlanetVolume:
         val = min(1, max(-1, base + extra))
         return int(val * 127 + 128)
 
+    def _addMesh(self, k, m):
+        if self.delegate:
+            self.delegate.add(m)
+
+        self._meshes[k] = m
+
+    def _removeMesh(self, k):
+        if self.delegate:
+            self.delegate.remove(self._meshes[k])
+
+        del self._meshes[k]
+
     def meshes(self):
         return self._meshes.values()
 
     def build(self, chunk):
         self._buildData(chunk)
 
-        self._meshes[chunk] = self.extractor.extract(chunk)
+        mesh = self.extractor.extract(chunk)
+
+        if len(mesh.indices):
+            self._addMesh(chunk, mesh)
+        else:
+            chunk.empty = True
 
         del chunk.data
 
@@ -81,7 +103,7 @@ class PlanetVolume:
                     chunk.data[i*SIZE_SQ + j*SIZE + k] = self._getVal(pos)
 
     def split(self, chunk):
-        if chunk.lod <= 1 or len(chunk.children) > 1:
+        if chunk.lod <= 1 or len(chunk.children) > 1 or chunk.empty:
             return
 
         pos = chunk.offset
@@ -102,7 +124,7 @@ class PlanetVolume:
         for c in children:
             self.build(c)
 
-        del self._meshes[chunk]
+        self._removeMesh(chunk)
 
         chunk.children = children
 
@@ -118,13 +140,13 @@ class PlanetVolume:
         if len(chunk.children) == 0:
             return
 
+        self.build(chunk)
+
         for c in chunk.children:
-            del self._meshes[c]
+            self._removeMesh(c)
             self.chunks.remove[c]
 
         chunk.children = []
-
-        self.build(chunk)
 
         self.parents.remove(chunk)
         self.chunks.append(chunk)
@@ -133,23 +155,29 @@ class PlanetVolume:
             self.parents.append(chunk)
 
     def update(self, viewer):
-        parents = list(self.parents)
+        merges, splits = {}, {}
 
-        for p in parents:
-            if not self._shouldSplit(p, viewer):
-                self.merge(p)
+        for p in self.parents:
+            factor = self._splitFactor(p, viewer)
+            if factor > 1:
+                merges[factor] = p
 
-        chunks = list(self.chunks)
+        if len(merges):
+            self.merge(merges[max(merges)])
 
-        for c in chunks:
-            if self._shouldSplit(c, viewer):
-                self.split(c)
+        for c in self.chunks:
+            factor = self._splitFactor(c, viewer)
+            if factor < 1:
+                splits[factor] = c
 
-    def _shouldSplit(self, chunk, viewer):
-            dist = vlen(vsub(vmuls(chunk.center, self.res), viewer))
+        if len(splits):
+            self.split(splits[min(splits)])
+
+    def _splitFactor(self, chunk, viewer):
+            dist = 0.8*vlen(vsub(vmuls(chunk.center, self.res), viewer))
             size = chunk.lod*CHUNK_SIZE * self.res
 
-            return dist < size*2.5
+            return dist / float(size)
 
 if __name__ == "__main__":
 

@@ -1363,7 +1363,7 @@ def glfwGetTime():
 	return libglfw.glfwGetTime()
 
 
-def glfwGetTime(time):
+def glfwSetTime(time):
 	'''
 	This function sets the value of the GLFW timer. It then continues to count up from that value.
 	'''

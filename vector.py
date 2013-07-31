@@ -2,19 +2,19 @@
 import math
 
 def vadd(a, b):
-    return tuple(a[i] + b[i] for i in range(3))
+    return (a[0]+b[0], a[1]+b[1], a[2]+b[2])
 
 def vadds(a, b):
-    return tuple(a[i] + b for i in range(3))
+    return (a[0]+b, a[1]+b, a[2]+b)
 
 def vsub(a, b):
-    return tuple(a[i] - b[i] for i in range(3))
+    return (a[0]-b[0], a[1]-b[1], a[2]-b[2])
 
 def vmuls(a, b):
-    return tuple(a[i] * b for i in range(3))
+    return (a[0]*b, a[1]*b, a[2]*b)
 
 def vdivs(a, b):
-    return tuple(a[i] / b for i in range(3))
+    return (a[0]/b, a[1]/b, a[2]/b)
 
 def vlen(a):
     return math.sqrt(a[0]**2 + a[1]**2 + a[2]**2)

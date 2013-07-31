@@ -13,8 +13,7 @@ class Shader:
 
         self.createShader(vert, GL_VERTEX_SHADER)
         self.createShader(frag, GL_FRAGMENT_SHADER)
-
-        # self.createShader(geom, GL_GEOMETRY_SHADER)
+        self.createShader(geom, GL_GEOMETRY_SHADER)
 
         # glProgrami(self.handle, GL_GEOMETRY_INPUT_TYPE, GL_TRIANGLES)
         # glProgrami(self.handle, GL_GEOMETRY_OUTPUT_TYPE, GL_TRIANGLE_STRIP)
@@ -24,6 +23,9 @@ class Shader:
         self.query_uniforms()
 
     def createShader(self, source, type):
+        if len(source) == 0:
+            return
+
         shader = glCreateShader(type)
 
         glShaderSource(shader, source)

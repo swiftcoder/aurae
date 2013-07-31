@@ -1,3 +1,4 @@
+#!/usr/bin/env pypy
 
 import math
 
@@ -50,10 +51,6 @@ simplex4 = [[0,64,128,192],[0,64,192,128],[0,0,0,0],
   [128,64,0,192],[0,0,0,0],[0,0,0,0],[0,0,0,0],
   [192,64,0,128],[0,0,0,0],[192,128,0,64],[192,128,64,0]]
 
-def fastfloor(x):
-    y = int(x)
-    return y if (x > 0) else (y - 1)
-
 def step(a, b):
     return 0 if (a > b) else 1;
 
@@ -68,20 +65,20 @@ def simplex(x, y, z):
     # Simple skewing factors for the 3D case
     F3 = 0.333333333;
     G3 = 0.166666667;
-        
+
     #float n0, n1, n2, n3; /* Noise contributions from the four corners */
-    
+
     # var n0 : float;
     # var n1 : float;
     # var n2 : float;
     # var n3 : float;
-    
+
     # Skew the input space to determine which simplex cell we're in
     s = (x+y+z)*F3; # Very nice and simple skew factor for 3D
-    i = fastfloor(x + s);
-    j = fastfloor(y + s);
-    k = fastfloor(z + s);
-    
+    i = int(math.floor(x + s));
+    j = int(math.floor(y + s));
+    k = int(math.floor(z + s));
+
     t = (i+j+k)*G3;
     X0 = i-t; # Unskew the cell origin back to (x,y,z) space
     Y0 = j-t;
@@ -89,12 +86,12 @@ def simplex(x, y, z):
     x0 = x-X0; # The x,y,z distances from the cell origin
     y0 = y-Y0;
     z0 = z-Z0;
-    
+
     # For the 3D case, the simplex shape is a slightly irregular tetrahedron.
     # Determine which simplex we are in.
     #int i1, j1, k1; /* Offsets for second corner of simplex in (i,j,k) coords */
     #int i2, j2, k2; /* Offsets for third corner of simplex in (i,j,k) coords */
-    
+
     # var i1 : int;
     # var j1 : int;
     # var k1 : int;
@@ -105,7 +102,7 @@ def simplex(x, y, z):
     # /*int c1 = x>y ? 32 : 0;
     # int c2 = x>z ? 16 : 0;
     # int c3 = y>z ? 8 : 0;
-    
+
     # int offset = c1+c2+c3;
 
     # i1 = step(96, simplex4[offset][0]);
@@ -115,7 +112,7 @@ def simplex(x, y, z):
     # i2 = step(32, simplex4[offset][0]);
     # j2 = step(32, simplex4[offset][1]);
     # k2 = step(32, simplex4[offset][2]);*/
-    
+
     # This code would benefit from a backport from the GLSL version!
     if x0>=y0:
       if y0>=z0:
@@ -131,7 +128,7 @@ def simplex(x, y, z):
         i1=0; j1=1; k1=0; i2=0; j2=1; k2=1; # Y Z X order
       else:
         i1=0; j1=1; k1=0; i2=1; j2=1; k2=0; # Y X Z order
-    
+
     # A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z),
     # a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and
     # a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where
@@ -146,19 +143,19 @@ def simplex(x, y, z):
     x3 = x0 - 1.0 + 3.0*G3; # Offsets for last corner in (x,y,z) coords
     y3 = y0 - 1.0 + 3.0*G3;
     z3 = z0 - 1.0 + 3.0*G3;
-    
+
     # Wrap the integer indices at 256, to avoid indexing perm[] out of bounds
     ii = i % 256;
     jj = j % 256;
     kk = k % 256;
-    
+
     if ii < 0:
       ii += 256;
     if jj < 0:
       jj += 256;
     if kk < 0:
       kk += 256;
-    
+
     gi0 = perm3(ii, jj, kk) % 12;
     gi1 = perm3(ii+i1, jj+j1, kk+k1) % 12;
     gi2 = perm3(ii+i2, jj+j2, kk+k2) % 12;
@@ -172,7 +169,7 @@ def simplex(x, y, z):
       t0 *= t0;
       #n0 = t0 * t0 * grad(perm[ii+perm[jj+perm[kk]]], x0, y0, z0);
       n0 = t0 * t0 * dot(grad3[gi0], x0, y0, z0);
-    
+
     t1 = 0.6 - x1*x1 - y1*y1 - z1*z1;
     if t1 < 0.0:
       n1 = 0.0;
@@ -180,7 +177,7 @@ def simplex(x, y, z):
       t1 *= t1;
       #n1 = t1 * t1 * grad(perm[ii+i1+perm[jj+j1+perm[kk+k1]]], x1, y1, z1);
       n1 = t1 * t1 * dot(grad3[gi1], x1, y1, z1);
-    
+
     t2 = 0.6 - x2*x2 - y2*y2 - z2*z2;
     if t2 < 0.0:
       n2 = 0.0;
@@ -188,7 +185,7 @@ def simplex(x, y, z):
       t2 *= t2;
       #n2 = t2 * t2 * grad(perm[ii+i2+perm[jj+j2+perm[kk+k2]]], x2, y2, z2);
       n2 = t2 * t2 * dot(grad3[gi2], x2, y2, z2);
-    
+
     t3 = 0.6 - x3*x3 - y3*y3 - z3*z3;
     if t3<0.0:
       n3 = 0.0;
@@ -196,7 +193,7 @@ def simplex(x, y, z):
       t3 *= t3;
       #n3 = t3 * t3 * grad(perm[ii+1+perm[jj+1+perm[kk+1]]], x3, y3, z3);
       n3 = t3 * t3 * dot(grad3[gi3], x3, y3, z3);
-    
+
     # Add contributions from each corner to get the final noise value.
     # The result is scaled to stay just inside [-1,1]
     return 32.0 * (n0 + n1 + n2 + n3); # TODO: The scale factor is preliminary!
@@ -204,10 +201,10 @@ def simplex(x, y, z):
 def fractal_brownian_motion(octaves, x, y, z, lacunarity, gain):
     #const double lacunarity = 1.9;
     #const double gain = 0.65;
-    
+
     sum = 0.0
     amplitude = 1.0
-    
+
     for i in range(octaves):
       sum += amplitude * simplex(x, y, z)
 
@@ -216,7 +213,7 @@ def fractal_brownian_motion(octaves, x, y, z, lacunarity, gain):
       x *= lacunarity
       y *= lacunarity
       z *= lacunarity
-    
+
     return sum
 
 def ridged_multifractal(octaves, x, y, z, lacunarity, gain, offset, h, weight, freq):
@@ -224,27 +221,34 @@ def ridged_multifractal(octaves, x, y, z, lacunarity, gain, offset, h, weight, f
     #const double gain = 2.0;
     #const double offset = 1.0;
     #const double h = 1.0;
-    
+
     signal = 0.0
     value = 0.0
     #double weight = 1.0;
     #double freq = 1.0;
-    
+
+    modulate = math.pow(freq, -h)
+
     for i in range(octaves):
       signal = (offset - abs(simplex(x, y, z)))
 
       signal *= signal * weight
-      
+
       weight = signal*gain
 
       weight = max(0.0, min(1.0, weight))
 
-      value += signal * math.pow(freq, -h)
-      
+      value += signal * modulate
+
       freq *= lacunarity
 
       x *= lacunarity
       y *= lacunarity
       z *= lacunarity
-    
+
     return value * 0.5
+
+if __name__ == '__main__':
+  for i in range(100000):
+    print ridged_multifractal(8, i/100000.0, 0.5, 0.5, 2, 2, 1, 0.5, 1, 1)
+
